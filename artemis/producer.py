@@ -115,6 +115,19 @@ def create_tasks(
                         logger.info(f"First tasks in {queue_name}: {task_uids}")
                 if not found_queues:
                     logger.warning(f"No tasks found in any classifier queue after sending task {task.uid}")
+                    # Check ALL queues in Redis to see where tasks might be
+                    all_queue_keys = backend.redis.keys("karton.queue.*")
+                    logger.info(f"Found {len(all_queue_keys)} total Karton queues in Redis")
+                    non_empty_queues = []
+                    for queue_key in all_queue_keys[:20]:  # Check first 20 queues
+                        queue_name = queue_key.decode() if isinstance(queue_key, bytes) else queue_key
+                        queue_length = backend.redis.llen(queue_name)
+                        if queue_length > 0:
+                            non_empty_queues.append((queue_name, queue_length))
+                    if non_empty_queues:
+                        logger.info(f"Non-empty queues found: {non_empty_queues}")
+                    else:
+                        logger.warning("No tasks found in ANY Karton queue - task routing may have failed")
             except Exception as queue_error:
                 logger.error(f"Could not check queues: {queue_error}", exc_info=True)
         except Exception as e:

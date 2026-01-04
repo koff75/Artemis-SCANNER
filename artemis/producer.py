@@ -73,11 +73,17 @@ def create_tasks(
                 binds = backend.get_binds()
                 logger.info(f"Found {len(binds)} registered binds in Redis")
                 # Log binds that match this task type
-                # KartonBind objects have .filters and .identity attributes
+                # KartonBind objects have .filters (list of dict) and .identity attributes
                 task_type = task.headers.get('type')
                 if isinstance(task_type, TaskType):
                     task_type = task_type.value
-                matching_binds = [b for b in binds if b.filters.get('type') == task_type]
+                # filters is a list of filter dicts, check if any filter matches
+                matching_binds = []
+                for b in binds:
+                    for filter_dict in b.filters:
+                        if filter_dict.get('type') == task_type:
+                            matching_binds.append(b)
+                            break
                 logger.info(f"Found {len(matching_binds)} binds matching type={task_type}: {[b.identity for b in matching_binds]}")
             except Exception as bind_error:
                 logger.warning(f"Could not check binds: {bind_error}", exc_info=True)

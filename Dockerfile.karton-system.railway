@@ -1,0 +1,10 @@
+FROM certpl/karton-system:v5.3.3
+
+# Copy scripts for Railway deployment
+COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
+COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
+RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
+
+# Generate karton.ini from REDIS_CONN_STR at startup and run karton-system
+# karton-system routes tasks from unrouted queue to module queues
+CMD ["/usr/local/bin/wait-for-redis.sh", "bash", "-c", "python3 /usr/local/bin/generate-karton-config.py && karton-system --setup-bucket --gc-interval 14400"]

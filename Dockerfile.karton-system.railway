@@ -5,6 +5,12 @@ COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
 COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
 RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
 
+# Create startup script
+RUN echo '#!/bin/sh\n\
+python3 /usr/local/bin/generate-karton-config.py\n\
+exec karton-system --setup-bucket --gc-interval 14400' > /usr/local/bin/start-karton-system.sh && \
+    chmod +x /usr/local/bin/start-karton-system.sh
+
 # Generate karton.ini from REDIS_CONN_STR at startup and run karton-system
 # karton-system routes tasks from unrouted queue to module queues
-CMD ["/usr/local/bin/wait-for-redis.sh", "bash", "-c", "python3 /usr/local/bin/generate-karton-config.py && karton-system --setup-bucket --gc-interval 14400"]
+CMD ["/usr/local/bin/wait-for-redis.sh", "/usr/local/bin/start-karton-system.sh"]

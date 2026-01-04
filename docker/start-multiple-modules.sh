@@ -8,8 +8,8 @@ set -e
 python3 /usr/local/bin/generate-karton-config.py
 
 # DB_CONN_STR est requis par le code (legacy MongoDB) mais n'est plus utilisé
-# On le définit avec une valeur vide pour éviter l'erreur
-export DB_CONN_STR="${DB_CONN_STR:-}"
+# On le définit avec une valeur factice pour éviter l'erreur
+export DB_CONN_STR="${DB_CONN_STR:-mongodb://localhost:27017/artemis}"
 
 # Exécuter les migrations
 alembic upgrade head

@@ -86,6 +86,15 @@ def create_tasks(
                             matching_binds.append(b)
                             break
                 logger.info(f"Found {len(matching_binds)} binds matching type={task_type}: {[b.identity for b in matching_binds]}")
+                # Check what queues would be created for the classifier module
+                if matching_binds:
+                    classifier_bind = matching_binds[0]  # classifier
+                    try:
+                        # Try to get queue names that would be used for this bind
+                        classifier_queues = backend.get_queue_names(classifier_bind.identity)
+                        logger.info(f"Queues that would be used for {classifier_bind.identity}: {classifier_queues}")
+                    except Exception as queue_name_error:
+                        logger.warning(f"Could not get queue names for {classifier_bind.identity}: {queue_name_error}")
             except Exception as bind_error:
                 logger.warning(f"Could not check binds: {bind_error}", exc_info=True)
             

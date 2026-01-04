@@ -1,5 +1,6 @@
 import glob
 import json
+import logging
 import os
 import urllib
 from io import BytesIO
@@ -15,6 +16,7 @@ from karton.core.backend import KartonBackend
 from karton.core.config import Config as KartonConfig
 from karton.core.inspect import KartonState
 from karton.core.task import TaskPriority, TaskState
+from redis.exceptions import ConnectionError as RedisConnectionError
 from starlette.datastructures import Headers
 
 from artemis import csrf
@@ -35,6 +37,7 @@ from artemis.templating import templates
 
 router = APIRouter()
 db = DB()
+logger = logging.getLogger(__name__)
 
 
 def whitelist_proxy_request_headers(headers: Headers) -> Dict[str, str]:
@@ -85,7 +88,14 @@ def get_root(request: Request) -> Response:
     has_analyses = len(list(db.get_paginated_analyses(0, 1, [ColumnOrdering("target", True)]).data)) > 0
     has_finished_analyses = False
 
-    num_pending_tasks = get_num_pending_tasks(KartonBackend(config=KartonConfig()))
+    # Try to get pending tasks, but handle Redis connection errors gracefully
+    num_pending_tasks: Dict[str, int] = {}
+    try:
+        backend = KartonBackend(config=KartonConfig())
+        num_pending_tasks = get_num_pending_tasks(backend)
+    except (RedisConnectionError, ConnectionError) as e:
+        logger.warning(f"Could not connect to Redis to get pending tasks: {e}")
+        # Continue with empty dict - the UI will still work, just without task counts
 
     for analysis in db.list_analysis():
         if analysis["id"] not in num_pending_tasks or num_pending_tasks[analysis["id"]] == 0:
@@ -338,9 +348,15 @@ def get_remove_finished_analyses(request: Request, csrf_protect: CsrfProtect = D
 @router.post("/remove-finished-analyses", include_in_schema=False)
 @csrf.validate_csrf
 async def post_remove_finished_analyses(request: Request, csrf_protect: CsrfProtect = Depends()) -> Response:
-    karton_state = KartonState(backend=KartonBackend(config=KartonConfig()))
-    for analysis in db.list_analysis():
-        if analysis["id"] not in karton_state.analyses or len(karton_state.analyses[analysis["id"]].pending_tasks) == 0:
+    try:
+        karton_state = KartonState(backend=KartonBackend(config=KartonConfig()))
+        for analysis in db.list_analysis():
+            if analysis["id"] not in karton_state.analyses or len(karton_state.analyses[analysis["id"]].pending_tasks) == 0:
+                db.delete_analysis(analysis["id"])
+    except (RedisConnectionError, ConnectionError) as e:
+        logger.warning(f"Could not connect to Redis to remove finished analyses: {e}")
+        # If Redis is not available, delete all analyses (fallback behavior)
+        for analysis in db.list_analysis():
             db.delete_analysis(analysis["id"])
     return RedirectResponse("/", status_code=301)
 
@@ -365,11 +381,14 @@ async def post_remove_pending_tasks(
 ) -> Response:
     db.mark_analysis_as_stopped(analysis_id)
 
-    backend = KartonBackend(config=KartonConfig())
-
-    for task in backend.get_all_tasks():
-        if task.root_uid == analysis_id:
-            backend.delete_task(task)
+    try:
+        backend = KartonBackend(config=KartonConfig())
+        for task in backend.get_all_tasks():
+            if task.root_uid == analysis_id:
+                backend.delete_task(task)
+    except (RedisConnectionError, ConnectionError) as e:
+        logger.warning(f"Could not connect to Redis to remove pending tasks: {e}")
+        # Analysis is already marked as stopped in DB, so continue
 
     return RedirectResponse("/", status_code=301)
 
@@ -380,13 +399,16 @@ async def get_pending_tasks(request: Request, analysis_id: str) -> Response:
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    backend = KartonBackend(config=KartonConfig())
-
     tasks = []
-    for task in backend.get_all_tasks():
-        if task.root_uid == analysis_id:
-            if task.status in [TaskState.SPAWNED, TaskState.STARTED]:
-                tasks.append((task, get_task_target(task)))
+    try:
+        backend = KartonBackend(config=KartonConfig())
+        for task in backend.get_all_tasks():
+            if task.root_uid == analysis_id:
+                if task.status in [TaskState.SPAWNED, TaskState.STARTED]:
+                    tasks.append((task, get_task_target(task)))
+    except (RedisConnectionError, ConnectionError) as e:
+        logger.warning(f"Could not connect to Redis to get pending tasks: {e}")
+        # Return empty tasks list - the UI will show no pending tasks
 
     return templates.TemplateResponse(
         "pending_tasks.jinja2",

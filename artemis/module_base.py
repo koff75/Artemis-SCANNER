@@ -316,7 +316,7 @@ class ArtemisBase(Karton):
             self.log.info("Exiting loop, shutdown=%s", self.shutdown)
 
     def _single_iteration(self) -> int:
-        self.log.debug("single iteration")
+        self.log.info("single iteration")  # Changed to info to see activity in Railway logs
 
         _, _, free_disk_space = shutil.disk_usage("/")
         if free_disk_space < 1024 * 1024 * Config.Miscellaneous.STOP_SCANNING_MODULES_IF_FREE_DISK_SPACE_LOWER_THAN_MB:
@@ -426,7 +426,7 @@ class ArtemisBase(Karton):
                     REDIS.set(f"queue_position-{self.identity}", 0)
 
                 original_queue_position = int(REDIS.get(f"queue_position-{self.identity}") or 0)
-                self.log.debug(f"[taking tasks] Taking tasks from queue {queue} from task {original_queue_position}")
+                self.log.info(f"[taking tasks] Taking tasks from queue {queue} from task {original_queue_position}")  # Changed to info
                 if self.lock_target:
                     REDIS.set(f"queue_id-{self.identity}", i)
                 for i_from_queue_position, item in enumerate(

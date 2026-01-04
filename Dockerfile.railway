@@ -43,9 +43,6 @@ COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
 COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
 RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
 
-# Install netcat for wait-for-redis script
-RUN apk add --no-cache netcat-openbsd
-
 # Railway will set the PORT environment variable
 ENV PORT=5000
 

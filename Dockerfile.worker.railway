@@ -39,12 +39,13 @@ RUN DB_CONN_STR=unused POSTGRES_CONN_STR=unused REDIS_CONN_STR=unused python3 -m
 COPY docker/karton.ini /etc/karton/karton.ini
 COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
 COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
-RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
+COPY docker/start-multiple-modules.sh /usr/local/bin/start-multiple-modules.sh
+RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh /usr/local/bin/start-multiple-modules.sh
 
 # Railway will set the PORT environment variable (not used for workers, but needed for consistency)
 ENV PORT=5000
 
-# Generate karton.ini from REDIS_CONN_STR at startup and run the worker module
-# The MODULE environment variable should be set to specify which module to run
-# Example: MODULE=classifier, MODULE=port_scanner, etc.
-CMD ["/usr/local/bin/wait-for-redis.sh", "bash", "-c", "python3 /usr/local/bin/generate-karton-config.py && alembic upgrade head && python3 -m artemis.modules.${MODULE:-classifier}"]
+# Generate karton.ini from REDIS_CONN_STR at startup and run multiple modules in parallel
+# The MODULES environment variable should be set to specify which modules to run (comma-separated)
+# Example: MODULES=classifier,http_service_to_url,webapp_identifier,ip_lookup
+CMD ["/usr/local/bin/wait-for-redis.sh", "/usr/local/bin/start-multiple-modules.sh"]

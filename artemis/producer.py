@@ -102,15 +102,21 @@ def create_tasks(
                     "karton.queue.normal:classifier",
                     "karton.queue.low:classifier"
                 ]
+                logger.info(f"Checking Redis queues for task {task.uid}...")
+                found_queues = []
                 for queue_name in classifier_queues:
                     queue_length = backend.redis.llen(queue_name)
                     if queue_length > 0:
+                        found_queues.append(queue_name)
                         logger.info(f"Queue {queue_name} has {queue_length} task(s)")
                         # Show first few task UIDs in queue
                         first_tasks = backend.redis.lrange(queue_name, 0, 4)
-                        logger.info(f"First tasks in {queue_name}: {[t.decode() if isinstance(t, bytes) else t for t in first_tasks[:3]]}")
+                        task_uids = [t.decode() if isinstance(t, bytes) else str(t) for t in first_tasks[:3]]
+                        logger.info(f"First tasks in {queue_name}: {task_uids}")
+                if not found_queues:
+                    logger.warning(f"No tasks found in any classifier queue after sending task {task.uid}")
             except Exception as queue_error:
-                logger.warning(f"Could not check queues: {queue_error}", exc_info=True)
+                logger.error(f"Could not check queues: {queue_error}", exc_info=True)
         except Exception as e:
             logger.error(f"Failed to send task {task.uid} to Redis: {e}", exc_info=True)
             raise

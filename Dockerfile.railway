@@ -1,0 +1,55 @@
+FROM python:3.13-alpine3.20
+
+COPY --from=golang:1.24-alpine /usr/local/go/ /usr/local/go/
+ENV PATH="/usr/local/go/bin:$PATH"
+
+COPY requirements.txt requirements.txt
+COPY docker/go.sum docker/go.mod /go/
+ARG ADDITIONAL_REQUIREMENTS
+# We run a single RUN command to decrease layer size - e.g. the final `apk del .build-deps` will
+# remove some apk packages.
+# Whois here is important - if we wouldn't install it, we would default to busybox whois,
+# having different output making https://pypi.org/project/whoisdomain/ regexes fail.
+RUN apk add --no-cache --virtual .build-deps gcc git libc-dev make libffi-dev libpcap-dev postgresql-dev && \
+    apk add --no-cache bash libpcap libpq git subversion whois coreutils && \
+    cd /go && \
+    GOBIN=/usr/local/bin/ go install -modfile go.mod github.com/projectdiscovery/naabu/v2/cmd/naabu && \
+    GOBIN=/usr/local/bin/ go install -modfile go.mod github.com/praetorian-inc/fingerprintx/cmd/fingerprintx && \
+    GOBIN=/usr/local/bin/ go install -modfile go.mod github.com/lc/gau/v2/cmd/gau && \
+    GOBIN=/usr/local/bin/ go install -modfile go.mod github.com/projectdiscovery/subfinder/v2/cmd/subfinder && \
+    GOBIN=/usr/local/bin/ go install -modfile go.mod github.com/projectdiscovery/nuclei/v3/cmd/nuclei && \
+    cd / && \
+    git clone https://github.com/rfc-st/humble.git --branch master /humble && \
+    git clone https://github.com/CERT-Polska/joomla-scanner.git --branch main /joomla-scanner && \
+    git clone https://github.com/Ostorlab/KEV.git --branch main /known-exploited-vulnerabilities && \
+    pip install --no-cache-dir -r requirements.txt -r /humble/requirements.txt $ADDITIONAL_REQUIREMENTS && \
+    apk del .build-deps && \
+    nuclei -update-templates
+
+WORKDIR /opt
+
+COPY "artemis/" "artemis/"
+COPY "alembic.ini" "alembic.ini"
+COPY "migrations/" "migrations/"
+COPY "static/" "static/"
+COPY "templates/" "templates/"
+
+# Warmup the cache. That way if the user is in an environment where requests to remote APIs (e.g. providing WordPress
+# version check) fail, the response will be served from an on-disk cache.
+RUN DB_CONN_STR=unused POSTGRES_CONN_STR=unused REDIS_CONN_STR=unused python3 -m artemis.fallback_api_cache
+
+COPY docker/karton.ini /etc/karton/karton.ini
+COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
+COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
+RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
+
+# Install netcat for wait-for-redis script
+RUN apk add --no-cache netcat-openbsd
+
+# Railway will set the PORT environment variable
+ENV PORT=5000
+
+# Railway doesn't need wait-for-dependencies as services are managed separately
+# But we still need to wait for Redis to be ready before starting
+# Generate karton.ini from REDIS_CONN_STR at startup (for Railway)
+CMD ["/usr/local/bin/wait-for-redis.sh", "bash", "-c", "python3 /usr/local/bin/generate-karton-config.py && alembic upgrade head && uvicorn artemis.main:app --host 0.0.0.0 --port ${PORT:-5000}"]

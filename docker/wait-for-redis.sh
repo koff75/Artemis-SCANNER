@@ -4,20 +4,32 @@
 REDIS_CONN_STR="${REDIS_CONN_STR:-redis://redis:6379/0}"
 
 # Parse Redis URL to extract host and port
+# Handle formats like: redis://user:pass@host:port/db or redis://host:port/db
 HOST=$(echo "$REDIS_CONN_STR" | sed -n 's|.*@\([^:]*\):.*|\1|p')
-PORT=$(echo "$REDIS_CONN_STR" | sed -n 's|.*:\([0-9]*\)/.*|\1|p' || echo "6379")
-
 if [ -z "$HOST" ]; then
-    # Fallback: try to extract from URL format
     HOST=$(echo "$REDIS_CONN_STR" | sed -n 's|.*://\([^:]*\):.*|\1|p' || echo "redis.railway.internal")
 fi
+
+PORT=$(echo "$REDIS_CONN_STR" | sed -n 's|.*:\([0-9]*\)/.*|\1|p' || echo "6379")
 
 echo "Waiting for Redis at $HOST:$PORT to be ready..."
 timeout=60
 elapsed=0
 
+# Use Python to check Redis connection (Python is already in the image)
 while [ $elapsed -lt $timeout ]; do
-    if nc -z "$HOST" "$PORT" 2>/dev/null || (command -v redis-cli >/dev/null 2>&1 && redis-cli -h "$HOST" -p "$PORT" ping >/dev/null 2>&1); then
+    if python3 -c "
+import socket
+import sys
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+    result = sock.connect_ex(('$HOST', $PORT))
+    sock.close()
+    sys.exit(0 if result == 0 else 1)
+except:
+    sys.exit(1)
+" 2>/dev/null; then
         echo "Redis is ready!"
         exec "$@"
         exit 0

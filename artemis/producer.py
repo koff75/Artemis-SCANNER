@@ -7,9 +7,18 @@ from karton.core.task import TaskPriority
 from artemis.binds import TaskType
 from artemis.db import DB
 
-producer = Producer(identity="frontend")
+# Lazy initialization of Producer to avoid Redis connection errors on import
+_producer: Optional[Producer] = None
 db = DB()
 logger = logging.getLogger(__name__)
+
+
+def get_producer() -> Producer:
+    """Get or create the Producer instance (lazy initialization)."""
+    global _producer
+    if _producer is None:
+        _producer = Producer(identity="frontend")
+    return _producer
 
 
 def create_tasks(
@@ -41,4 +50,4 @@ def create_tasks(
         db.create_analysis(task)
         db.save_scheduled_task(task)
         db.save_tag(tag)
-        producer.send_task(task)
+        get_producer().send_task(task)

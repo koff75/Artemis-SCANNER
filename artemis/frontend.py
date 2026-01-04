@@ -429,26 +429,89 @@ def get_queue(request: Request) -> Response:
 
 @router.api_route("/karton-dashboard/{path:path}", methods=["GET", "POST"], include_in_schema=False)
 async def karton_dashboard(request: Request, path: str) -> Response:
-    response = requests.request(
-        url="http://karton-dashboard:5000/karton-dashboard/" + path,
-        method=request.method,
-        allow_redirects=False,
-        headers={"connection": "close", **whitelist_proxy_request_headers(request.headers)},
-    )
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        headers=whitelist_proxy_response_headers(response.headers),
-    )
+    # Use KARTON_DASHBOARD_URL if set (for Railway), otherwise default to Docker service name
+    dashboard_url = os.environ.get("KARTON_DASHBOARD_URL", "http://karton-dashboard:5000")
+    try:
+        response = requests.request(
+            url=f"{dashboard_url}/karton-dashboard/" + path,
+            method=request.method,
+            allow_redirects=False,
+            headers={"connection": "close", **whitelist_proxy_request_headers(request.headers)},
+            timeout=5,
+        )
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=whitelist_proxy_response_headers(response.headers),
+        )
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+        # Karton dashboard service is not available (e.g., on Railway where it's not deployed)
+        html_content = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Karton Dashboard - Not Available</title>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    margin: 0;
+                    background-color: #f5f5f5;
+                }
+                .container {
+                    text-align: center;
+                    padding: 2rem;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    max-width: 600px;
+                }
+                h1 {
+                    color: #333;
+                    margin-bottom: 1rem;
+                }
+                p {
+                    color: #666;
+                    line-height: 1.6;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Karton Dashboard</h1>
+                <p>The Karton Dashboard is not available on this deployment.</p>
+                <p>This service requires a separate <code>karton-dashboard</code> container, which is not deployed on Railway.</p>
+                <p>For full functionality, you can deploy karton-dashboard as a separate service, or use the main Artemis interface to view task queues and results.</p>
+            </div>
+        </body>
+        </html>
+        """
+        return Response(
+            content=html_content,
+            status_code=503,
+            media_type="text/html",
+        )
 
 
 @router.api_route("/metrics", methods=["GET"], include_in_schema=False)
 async def prometheus(request: Request) -> Response:
-    response = requests.get(url="http://metrics:9000/")
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-    )
+    try:
+        response = requests.get(url="http://metrics:9000/", timeout=5)
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=whitelist_proxy_response_headers(response.headers),
+        )
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+        # Metrics service is not available (e.g., on Railway where it's not deployed)
+        return Response(
+            content="Metrics service is not available. This service requires a separate metrics container which is not deployed on Railway.",
+            status_code=503,
+            media_type="text/plain",
+        )
 
 
 @router.get("/analysis/{root_id}", include_in_schema=False)

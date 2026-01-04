@@ -1,0 +1,26 @@
+FROM certpl/karton-dashboard:f719024c3387bab39c21f890af369afb5943d3cf
+
+# Install Python if not already present (karton-dashboard image should have it)
+RUN which python3 || (apt-get update && apt-get install -y python3 && rm -rf /var/lib/apt/lists/*)
+
+# Copy the script to generate karton.ini
+COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
+RUN chmod +x /usr/local/bin/generate-karton-config.py
+
+# Create docker-entrypoint.sh script with debugging
+RUN echo '#!/bin/bash' > /docker-entrypoint.sh && \
+    echo 'set -e' >> /docker-entrypoint.sh && \
+    echo 'echo "=== Starting karton-dashboard ==="' >> /docker-entrypoint.sh && \
+    echo 'echo "Generating karton.ini from REDIS_CONN_STR..."' >> /docker-entrypoint.sh && \
+    echo 'python3 /usr/local/bin/generate-karton-config.py' >> /docker-entrypoint.sh && \
+    echo 'echo "karton.ini generated. Content:"' >> /docker-entrypoint.sh && \
+    echo 'cat /etc/karton/karton.ini' >> /docker-entrypoint.sh && \
+    echo 'echo "Starting karton-dashboard on port ${PORT:-5000}..."' >> /docker-entrypoint.sh && \
+    echo 'exec karton-dashboard run --host 0.0.0.0 --port ${PORT:-5000}' >> /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
+
+# Railway will set the PORT environment variable
+ENV PORT=5000
+
+# Override ENTRYPOINT to use our script explicitly
+ENTRYPOINT ["/docker-entrypoint.sh"]

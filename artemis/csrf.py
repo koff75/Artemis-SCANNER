@@ -17,6 +17,11 @@ db = DB()
 
 def generate_csrf_secret() -> str:
     csrf_secret_path = "/data/csrf_secret"
+    csrf_secret_dir = os.path.dirname(csrf_secret_path)
+
+    # Create directory if it doesn't exist (needed for Railway and other platforms without persistent volumes)
+    if not os.path.exists(csrf_secret_dir):
+        os.makedirs(csrf_secret_dir, exist_ok=True)
 
     if os.path.exists(csrf_secret_path):
         with open(csrf_secret_path) as f:

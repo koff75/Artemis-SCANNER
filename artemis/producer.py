@@ -89,8 +89,34 @@ def create_tasks(
             except Exception as bind_error:
                 logger.warning(f"Could not check binds: {bind_error}", exc_info=True)
             
+            # Log task details before sending
+            logger.info(f"Task priority: {task.priority}, headers: {task.headers}")
+            # Check Redis state before sending
+            try:
+                from karton.core.backend import KartonBackend
+                from karton.core.config import Config as KartonConfig
+                pre_backend = KartonBackend(config=KartonConfig())
+                pre_queues = pre_backend.redis.keys("karton.queue.*")
+                logger.info(f"Redis queues before send_task: {len(pre_queues)} queues")
+            except Exception as e:
+                logger.warning(f"Could not check pre-send state: {e}")
+            
             producer.send_task(task)
             logger.info(f"Task {task.uid} successfully sent to Redis queue")
+            
+            # Check if task is stored in Karton's task storage (not just queues)
+            try:
+                from karton.core.backend import KartonBackend
+                from karton.core.config import Config as KartonConfig
+                post_backend = KartonBackend(config=KartonConfig())
+                # Check if task exists in Karton's task storage
+                task_data = post_backend.redis.get(f"karton.task:{task.uid}")
+                if task_data:
+                    logger.info(f"Task {task.uid} found in Karton task storage")
+                else:
+                    logger.warning(f"Task {task.uid} NOT found in Karton task storage")
+            except Exception as e:
+                logger.warning(f"Could not check task storage: {e}")
             # Check Redis queues after sending to see where the task went
             try:
                 from karton.core.backend import KartonBackend

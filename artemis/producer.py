@@ -145,6 +145,23 @@ def create_tasks(
                     # Check ALL queues in Redis to see where tasks might be
                     all_queue_keys = backend.redis.keys("karton.queue.*")
                     logger.info(f"Found {len(all_queue_keys)} total Karton queues in Redis")
+                    # Check for unrouted queue (where tasks are initially placed)
+                    unrouted_queues = [
+                        "karton.queue.unrouted",
+                        "karton.unrouted",
+                        "unrouted"
+                    ]
+                    for unrouted_queue in unrouted_queues:
+                        queue_length = backend.redis.llen(unrouted_queue)
+                        if queue_length > 0:
+                            logger.info(f"Unrouted queue {unrouted_queue} has {queue_length} task(s)")
+                            first_tasks = backend.redis.lrange(unrouted_queue, 0, 4)
+                            task_uids = [t.decode() if isinstance(t, bytes) else str(t) for t in first_tasks[:3]]
+                            logger.info(f"Tasks in {unrouted_queue}: {task_uids}")
+                    # Check all Redis keys that might contain tasks
+                    all_keys = backend.redis.keys("*")
+                    karton_keys = [k.decode() if isinstance(k, bytes) else k for k in all_keys if "karton" in (k.decode() if isinstance(k, bytes) else k).lower()]
+                    logger.info(f"Found {len(karton_keys)} Redis keys containing 'karton': {karton_keys[:10]}")
                     non_empty_queues = []
                     for queue_key in all_queue_keys[:20]:  # Check first 20 queues
                         queue_name = queue_key.decode() if isinstance(queue_key, bytes) else queue_key

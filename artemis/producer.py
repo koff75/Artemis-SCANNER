@@ -17,7 +17,17 @@ def get_producer() -> Producer:
     """Get or create the Producer instance (lazy initialization)."""
     global _producer
     if _producer is None:
+        import os
+        config_path = "/etc/karton/karton.ini"
+        logger.info(f"Initializing Producer with identity='frontend', config_path={config_path}")
+        if os.path.exists(config_path):
+            logger.info(f"karton.ini exists at {config_path}")
+            with open(config_path, 'r') as f:
+                logger.info(f"karton.ini content:\n{f.read()}")
+        else:
+            logger.warning(f"karton.ini NOT found at {config_path}")
         _producer = Producer(identity="frontend")
+        logger.info("Producer initialized successfully")
     return _producer
 
 

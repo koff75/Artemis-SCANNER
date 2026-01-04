@@ -40,7 +40,8 @@ def create_tasks(
     module_runtime_configurations: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> None:
     for uri in uris:
-        task = Task({"type": TaskType.NEW})
+        # Use .value to ensure we pass a string, not an enum, to Karton
+        task = Task({"type": TaskType.NEW.value})
         task.add_payload("data", uri)
         if priority:
             task.priority = priority

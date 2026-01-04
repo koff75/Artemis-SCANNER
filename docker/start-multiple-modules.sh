@@ -33,8 +33,7 @@ start_module() {
 rm -f /tmp/module_pids.txt
 
 # Démarrer chaque module
-IFS=
- read -ra MODULE_ARRAY <<< "$MODULES"
+IFS=',' read -ra MODULE_ARRAY <<< "$MODULES"
 for module in "${MODULE_ARRAY[@]}"; do
     module=$(echo "$module" | xargs)  # Trim whitespace
     if [ -n "$module" ]; then

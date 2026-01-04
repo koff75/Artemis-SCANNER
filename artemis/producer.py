@@ -62,7 +62,23 @@ def create_tasks(
         db.save_tag(tag)
         logger.info(f"Sending task to Redis: {task.uid}, type={task.headers.get('type')}, data={task.payload.get('data')}")
         try:
-            get_producer().send_task(task)
+            producer = get_producer()
+            # Log task details before sending
+            logger.info(f"Task headers: {task.headers}, payload keys: {list(task.payload.keys())}")
+            # Check if we can see binds (for debugging)
+            try:
+                from karton.core.backend import KartonBackend
+                from karton.core.config import Config as KartonConfig
+                backend = KartonBackend(config=KartonConfig())
+                binds = backend.get_binds()
+                logger.info(f"Found {len(binds)} registered binds in Redis")
+                # Log binds that match this task type
+                matching_binds = [b for b in binds if b.get('filters', {}).get('type') == task.headers.get('type')]
+                logger.info(f"Found {len(matching_binds)} binds matching type={task.headers.get('type')}: {[b.get('identity') for b in matching_binds]}")
+            except Exception as bind_error:
+                logger.warning(f"Could not check binds: {bind_error}")
+            
+            producer.send_task(task)
             logger.info(f"Task {task.uid} successfully sent to Redis queue")
         except Exception as e:
             logger.error(f"Failed to send task {task.uid} to Redis: {e}", exc_info=True)

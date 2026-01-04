@@ -23,8 +23,9 @@ echo "=== Démarrage des modules: $MODULES ==="
 start_module() {
     local module=$1
     echo "Démarrage du module: $module"
-    # Rediriger stdout et stderr vers stdout/stderr du conteneur pour voir les logs dans Railway
-    python3 -m artemis.modules.$module >> /proc/1/fd/1 2>> /proc/1/fd/2 &
+    # Démarrer le module en arrière-plan - sa sortie sera visible dans les logs Railway
+    # car les processus enfants héritent de stdout/stderr du processus parent
+    python3 -m artemis.modules.$module &
     local pid=$!
     echo "Module $module démarré avec PID: $pid"
     echo $pid >> /tmp/module_pids.txt

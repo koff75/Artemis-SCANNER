@@ -7,6 +7,10 @@ set -e
 # Générer karton.ini
 python3 /usr/local/bin/generate-karton-config.py
 
+# DB_CONN_STR est requis par le code (legacy MongoDB) mais n'est plus utilisé
+# On le définit avec une valeur vide pour éviter l'erreur
+export DB_CONN_STR="${DB_CONN_STR:-}"
+
 # Exécuter les migrations
 alembic upgrade head
 

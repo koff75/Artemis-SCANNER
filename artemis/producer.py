@@ -73,10 +73,14 @@ def create_tasks(
                 binds = backend.get_binds()
                 logger.info(f"Found {len(binds)} registered binds in Redis")
                 # Log binds that match this task type
-                matching_binds = [b for b in binds if b.get('filters', {}).get('type') == task.headers.get('type')]
-                logger.info(f"Found {len(matching_binds)} binds matching type={task.headers.get('type')}: {[b.get('identity') for b in matching_binds]}")
+                # KartonBind objects have .filters and .identity attributes
+                task_type = task.headers.get('type')
+                if isinstance(task_type, TaskType):
+                    task_type = task_type.value
+                matching_binds = [b for b in binds if b.filters.get('type') == task_type]
+                logger.info(f"Found {len(matching_binds)} binds matching type={task_type}: {[b.identity for b in matching_binds]}")
             except Exception as bind_error:
-                logger.warning(f"Could not check binds: {bind_error}")
+                logger.warning(f"Could not check binds: {bind_error}", exc_info=True)
             
             producer.send_task(task)
             logger.info(f"Task {task.uid} successfully sent to Redis queue")

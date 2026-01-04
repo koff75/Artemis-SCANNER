@@ -3,7 +3,25 @@ FROM certpl/karton-dashboard:f719024c3387bab39c21f890af369afb5943d3cf
 # Install Python if not already present (karton-dashboard image should have it)
 RUN which python3 || (apt-get update && apt-get install -y python3 && rm -rf /var/lib/apt/lists/*)
 
-# Copy the script to generate karton.ini
+# Create /etc/karton directory
+RUN mkdir -p /etc/karton
+
+# Create a default karton.ini with S3 configuration (will be regenerated at runtime)
+RUN echo '[dashboard]' > /etc/karton/karton.ini && \
+    echo 'base_path=/karton-dashboard/' >> /etc/karton/karton.ini && \
+    echo '' >> /etc/karton/karton.ini && \
+    echo '[s3]' >> /etc/karton/karton.ini && \
+    echo 'address=http://s3mock:9090/' >> /etc/karton/karton.ini && \
+    echo 'access_key=mock_access_key' >> /etc/karton/karton.ini && \
+    echo 'secret_key=mock_secret_key' >> /etc/karton/karton.ini && \
+    echo 'bucket=bucket' >> /etc/karton/karton.ini && \
+    echo '' >> /etc/karton/karton.ini && \
+    echo '[redis]' >> /etc/karton/karton.ini && \
+    echo 'host=localhost' >> /etc/karton/karton.ini && \
+    echo 'port=6379' >> /etc/karton/karton.ini && \
+    echo 'db=0' >> /etc/karton/karton.ini
+
+# Copy the script to generate karton.ini at runtime
 COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
 RUN chmod +x /usr/local/bin/generate-karton-config.py
 

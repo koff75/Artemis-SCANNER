@@ -50,4 +50,10 @@ def create_tasks(
         db.create_analysis(task)
         db.save_scheduled_task(task)
         db.save_tag(tag)
-        get_producer().send_task(task)
+        logger.info(f"Sending task to Redis: {task.uid}, type={task.headers.get('type')}, data={task.payload.get('data')}")
+        try:
+            get_producer().send_task(task)
+            logger.info(f"Task {task.uid} successfully sent to Redis queue")
+        except Exception as e:
+            logger.error(f"Failed to send task {task.uid} to Redis: {e}", exc_info=True)
+            raise

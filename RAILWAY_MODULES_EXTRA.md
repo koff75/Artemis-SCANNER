@@ -13,7 +13,7 @@ D'après le dépôt Artemis-modules-extra :
 1. **karton_sqlmap** - Détection d'injections SQL (GPL-2.0)
 2. **karton_ssl_checks** - Vérification de la configuration SSL (AGPL-3.0)
 3. **karton_dns_reaper** - Détection de subdomain takeover (AGPL-3.0)
-4. **karton_forti_vuln** - Détection CVE-2024-21762 Fortigate (GPL-3.0)
+4. **forti_vuln** - Détection CVE-2024-21762 Fortigate (GPL-3.0)
 5. **karton_whatvpn** - Identification de serveurs VPN SSL (GPL-3.0-or-later)
 6. **karton_xss_scanner** - Détection de vulnérabilités XSS (GPL-3.0)
 7. **karton_wpscan** - Scan WordPress (désactivé par défaut, nécessite licence)
@@ -28,12 +28,12 @@ D'après le dépôt Artemis-modules-extra :
 **Modules extra à ajouter** :
 - `karton_ssl_checks` - Vérification SSL
 - `karton_dns_reaper` - Subdomain takeover
-- `karton_forti_vuln` - Vulnérabilités Fortigate
+- `forti_vuln` - Vulnérabilités Fortigate
 - `karton_whatvpn` - Identification VPN
 
 **Nouvelle variable MODULES** :
 ```
-MODULES=port_scanner,subdomain_enumeration,dns_scanner,reverse_dns_lookup,device_identifier,directory_index,robots,vcs,api_scanner,karton_ssl_checks,karton_dns_reaper,karton_forti_vuln,karton_whatvpn
+MODULES=port_scanner,subdomain_enumeration,dns_scanner,reverse_dns_lookup,device_identifier,directory_index,robots,vcs,api_scanner,karton_ssl_checks,karton_dns_reaper,forti_vuln,karton_whatvpn
 ```
 
 ---
@@ -91,7 +91,7 @@ git submodule update --init --recursive
 2. Variables d'environnement → Modifier `MODULES`
 3. Nouvelle valeur :
    ```
-   MODULES=port_scanner,subdomain_enumeration,dns_scanner,reverse_dns_lookup,device_identifier,directory_index,robots,vcs,api_scanner,karton_ssl_checks,karton_dns_reaper,karton_forti_vuln,karton_whatvpn
+   MODULES=port_scanner,subdomain_enumeration,dns_scanner,reverse_dns_lookup,device_identifier,directory_index,robots,vcs,api_scanner,karton_ssl_checks,karton_dns_reaper,forti_vuln,karton_whatvpn
    ```
 4. Sauvegarder → Le service redéploiera automatiquement
 

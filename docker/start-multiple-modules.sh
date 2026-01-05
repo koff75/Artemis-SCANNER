@@ -11,8 +11,8 @@ python3 /usr/local/bin/generate-karton-config.py
 # On le définit avec une valeur factice pour éviter l'erreur
 export DB_CONN_STR="${DB_CONN_STR:-mongodb://localhost:27017/artemis}"
 
-# Exécuter les migrations
-alembic upgrade head
+# Exécuter les migrations (ne pas faire échouer le script si cela échoue)
+alembic upgrade head || echo "Avertissement: Échec des migrations Alembic (peut être normal si DB_CONN_STR n'est pas défini)"
 
 # Parser la variable MODULES (format: "module1,module2,module3")
 MODULES="${MODULES:-classifier}"
@@ -25,10 +25,16 @@ start_module() {
     local module=$1
     echo "Démarrage du module: $module"
     
-    # Détecter d'abord si c'est un module extra (commence par karton_)
-    if [[ "$module" == karton_* ]]; then
+    # Détecter d'abord si c'est un module extra (commence par karton_ ou forti_vuln)
+    # Les modules extra peuvent avoir le préfixe karton_ ou être forti_vuln
+    if [[ "$module" =~ ^karton_ ]] || [[ "$module" == "forti_vuln" ]]; then
         # Module extra - exécuter le fichier Python directement
-        module_file="/opt/Artemis-modules-extra/$module/$module.py"
+        # Certains modules ont le préfixe karton_ dans le nom du répertoire, d'autres non
+        if [[ "$module" == "forti_vuln" ]]; then
+            module_file="/opt/Artemis-modules-extra/forti_vuln/forti_vuln.py"
+        else
+            module_file="/opt/Artemis-modules-extra/$module/$module.py"
+        fi
         if [ -f "$module_file" ]; then
             echo "Module extra détecté: $module"
             python3 "$module_file" &

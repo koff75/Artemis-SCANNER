@@ -1,15 +1,15 @@
 FROM certpl/karton-system:v5.3.3
 
 # Copy scripts for Railway deployment
-COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
+COPY docker/generate-karton-config-system.py /usr/local/bin/generate-karton-config-system.py
 COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
-RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
+RUN chmod +x /usr/local/bin/generate-karton-config-system.py /usr/local/bin/wait-for-redis.sh
 
-# Create startup script that generates config and runs karton-system
-# Note: We don't use --setup-bucket because S3 is not available on Railway
+# Create startup script that generates config (without S3) and runs karton-system
+# Note: We use a special config generator that doesn't include S3 section
 # The --disable-gc option disables garbage collection which requires S3
 RUN echo '#!/bin/sh' > /usr/local/bin/start-karton-system.sh && \
-    echo 'python3 /usr/local/bin/generate-karton-config.py' >> /usr/local/bin/start-karton-system.sh && \
+    echo 'python3 /usr/local/bin/generate-karton-config-system.py' >> /usr/local/bin/start-karton-system.sh && \
     echo 'exec karton-system --disable-gc' >> /usr/local/bin/start-karton-system.sh && \
     chmod +x /usr/local/bin/start-karton-system.sh
 

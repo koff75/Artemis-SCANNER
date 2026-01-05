@@ -5,8 +5,8 @@ COPY docker/generate-karton-config-system.py /usr/local/bin/generate-karton-conf
 COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
 RUN chmod +x /usr/local/bin/generate-karton-config-system.py /usr/local/bin/wait-for-redis.sh
 
-# Create startup script that generates config (without S3) and runs karton-system
-# Note: We use a special config generator that doesn't include S3 section
+# Create startup script that generates config and runs karton-system
+# Note: S3 config is required by karton-system but we use --disable-gc to avoid using it
 # The --disable-gc option disables garbage collection which requires S3
 RUN echo '#!/bin/sh' > /usr/local/bin/start-karton-system.sh && \
     echo 'python3 /usr/local/bin/generate-karton-config-system.py' >> /usr/local/bin/start-karton-system.sh && \

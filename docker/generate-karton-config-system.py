@@ -20,10 +20,20 @@ if REDIS_CONN_STR:
     password = url.password or ""
     username = url.username or ""
 
-    # Generate karton.ini content WITHOUT S3 section (S3 not available on Railway)
+    # Generate karton.ini content with S3 section (required by karton-system)
+    # We use a dummy S3 config that won't cause connection errors
+    # karton-system requires S3 config even with --disable-gc
     config_lines = [
         "[dashboard]",
         "base_path=/karton-dashboard/",
+        "",
+        "[s3]",
+        "# S3 configuration is required by karton-system but not used on Railway",
+        "# Using a dummy endpoint that won't cause immediate connection errors",
+        "address=http://127.0.0.1:65535/",
+        "access_key=dummy",
+        "secret_key=dummy",
+        "bucket=dummy",
         "",
         "[redis]",
         f"host={host}",

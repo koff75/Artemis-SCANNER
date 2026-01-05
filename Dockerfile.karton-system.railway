@@ -6,10 +6,13 @@ COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
 RUN chmod +x /usr/local/bin/generate-karton-config-system.py /usr/local/bin/wait-for-redis.sh
 
 # Create startup script that generates config and runs karton-system
-# Note: S3 config is required by karton-system but we use --disable-gc to avoid using it
-# The --disable-gc option disables garbage collection which requires S3
+# Note: We use --disable-router to avoid S3 bucket check, but this disables routing
+# Actually, we need routing, so we'll patch the Python code to skip S3 check
+# Alternative: Use environment variable to skip S3 initialization
 RUN echo '#!/bin/sh' > /usr/local/bin/start-karton-system.sh && \
     echo 'python3 /usr/local/bin/generate-karton-config-system.py' >> /usr/local/bin/start-karton-system.sh && \
+    echo '# Patch karton-system to skip S3 bucket check' >> /usr/local/bin/start-karton-system.sh && \
+    echo 'python3 -c "import sys; sys.path.insert(0, \"/usr/local/lib/python3.11/site-packages\"); import karton.system.system; karton.system.system.SystemService.ensure_bucket_exists = lambda self, create: True"' >> /usr/local/bin/start-karton-system.sh && \
     echo 'exec karton-system --disable-gc' >> /usr/local/bin/start-karton-system.sh && \
     chmod +x /usr/local/bin/start-karton-system.sh
 

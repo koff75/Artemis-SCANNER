@@ -6,9 +6,11 @@ COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
 RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
 
 # Create startup script that generates config and runs karton-system
+# Note: We don't use --setup-bucket because S3 is not available on Railway
+# The --disable-gc option disables garbage collection which requires S3
 RUN echo '#!/bin/sh' > /usr/local/bin/start-karton-system.sh && \
     echo 'python3 /usr/local/bin/generate-karton-config.py' >> /usr/local/bin/start-karton-system.sh && \
-    echo 'exec karton-system --setup-bucket --gc-interval 14400' >> /usr/local/bin/start-karton-system.sh && \
+    echo 'exec karton-system --disable-gc' >> /usr/local/bin/start-karton-system.sh && \
     chmod +x /usr/local/bin/start-karton-system.sh
 
 # Override ENTRYPOINT to use our wait script, then execute our startup script

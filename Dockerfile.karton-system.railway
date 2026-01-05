@@ -5,12 +5,13 @@ COPY docker/generate-karton-config.py /usr/local/bin/generate-karton-config.py
 COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
 RUN chmod +x /usr/local/bin/generate-karton-config.py /usr/local/bin/wait-for-redis.sh
 
-# Create startup script
-RUN echo '#!/bin/sh\n\
-python3 /usr/local/bin/generate-karton-config.py\n\
-exec karton-system --setup-bucket --gc-interval 14400' > /usr/local/bin/start-karton-system.sh && \
+# Create startup script that generates config and runs karton-system
+RUN echo '#!/bin/sh' > /usr/local/bin/start-karton-system.sh && \
+    echo 'python3 /usr/local/bin/generate-karton-config.py' >> /usr/local/bin/start-karton-system.sh && \
+    echo 'exec karton-system --setup-bucket --gc-interval 14400' >> /usr/local/bin/start-karton-system.sh && \
     chmod +x /usr/local/bin/start-karton-system.sh
 
-# Generate karton.ini from REDIS_CONN_STR at startup and run karton-system
-# karton-system routes tasks from unrouted queue to module queues
-CMD ["/usr/local/bin/wait-for-redis.sh", "/usr/local/bin/start-karton-system.sh"]
+# Override ENTRYPOINT to use our wait script, then execute our startup script
+# The image has ENTRYPOINT ["karton-system"], so we override it
+ENTRYPOINT ["/usr/local/bin/wait-for-redis.sh"]
+CMD ["/usr/local/bin/start-karton-system.sh"]

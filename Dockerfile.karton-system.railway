@@ -2,18 +2,15 @@ FROM certpl/karton-system:v5.3.3
 
 # Copy scripts for Railway deployment
 COPY docker/generate-karton-config-system.py /usr/local/bin/generate-karton-config-system.py
+COPY docker/karton-system-wrapper.py /usr/local/bin/karton-system-wrapper.py
 COPY docker/wait-for-redis.sh /usr/local/bin/wait-for-redis.sh
-RUN chmod +x /usr/local/bin/generate-karton-config-system.py /usr/local/bin/wait-for-redis.sh
+RUN chmod +x /usr/local/bin/generate-karton-config-system.py /usr/local/bin/karton-system-wrapper.py /usr/local/bin/wait-for-redis.sh
 
-# Create startup script that generates config and runs karton-system
-# Note: We use --disable-router to avoid S3 bucket check, but this disables routing
-# Actually, we need routing, so we'll patch the Python code to skip S3 check
-# Alternative: Use environment variable to skip S3 initialization
+# Create startup script that generates config and runs karton-system with wrapper
+# The wrapper patches karton-system to skip S3 bucket check
 RUN echo '#!/bin/sh' > /usr/local/bin/start-karton-system.sh && \
     echo 'python3 /usr/local/bin/generate-karton-config-system.py' >> /usr/local/bin/start-karton-system.sh && \
-    echo '# Patch karton-system to skip S3 bucket check' >> /usr/local/bin/start-karton-system.sh && \
-    echo 'python3 -c "import sys; sys.path.insert(0, \"/usr/local/lib/python3.11/site-packages\"); import karton.system.system; karton.system.system.SystemService.ensure_bucket_exists = lambda self, create: True"' >> /usr/local/bin/start-karton-system.sh && \
-    echo 'exec karton-system --disable-gc' >> /usr/local/bin/start-karton-system.sh && \
+    echo 'exec python3 /usr/local/bin/karton-system-wrapper.py --disable-gc' >> /usr/local/bin/start-karton-system.sh && \
     chmod +x /usr/local/bin/start-karton-system.sh
 
 # Override ENTRYPOINT to use our wait script, then execute our startup script

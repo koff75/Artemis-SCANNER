@@ -19,15 +19,10 @@ def get_producer() -> Producer:
     if _producer is None:
         import os
         config_path = "/etc/karton/karton.ini"
-        logger.info(f"Initializing Producer with identity='frontend', config_path={config_path}")
-        if os.path.exists(config_path):
-            logger.info(f"karton.ini exists at {config_path}")
-            with open(config_path, 'r') as f:
-                logger.info(f"karton.ini content:\n{f.read()}")
-        else:
+        if not os.path.exists(config_path):
             logger.warning(f"karton.ini NOT found at {config_path}")
         _producer = Producer(identity="frontend")
-        logger.info("Producer initialized successfully")
+        logger.debug("Producer initialized")
     return _producer
 
 
@@ -64,125 +59,8 @@ def create_tasks(
         logger.info(f"Sending task to Redis: {task.uid}, type={task.headers.get('type')}, data={task.payload.get('data')}")
         try:
             producer = get_producer()
-            # Log task details before sending
-            logger.info(f"Task headers: {task.headers}, payload keys: {list(task.payload.keys())}")
-            # Check if we can see binds (for debugging)
-            try:
-                from karton.core.backend import KartonBackend
-                from karton.core.config import Config as KartonConfig
-                backend = KartonBackend(config=KartonConfig())
-                binds = backend.get_binds()
-                logger.info(f"Found {len(binds)} registered binds in Redis")
-                # Log binds that match this task type
-                # KartonBind objects have .filters (list of dict) and .identity attributes
-                task_type = task.headers.get('type')
-                if isinstance(task_type, TaskType):
-                    task_type = task_type.value
-                # filters is a list of filter dicts, check if any filter matches
-                matching_binds = []
-                for b in binds:
-                    for filter_dict in b.filters:
-                        if filter_dict.get('type') == task_type:
-                            matching_binds.append(b)
-                            break
-                logger.info(f"Found {len(matching_binds)} binds matching type={task_type}: {[b.identity for b in matching_binds]}")
-                # Check what queues would be created for the classifier module
-                if matching_binds:
-                    classifier_bind = matching_binds[0]  # classifier
-                    try:
-                        # Try to get queue names that would be used for this bind
-                        classifier_queues = backend.get_queue_names(classifier_bind.identity)
-                        logger.info(f"Queues that would be used for {classifier_bind.identity}: {classifier_queues}")
-                    except Exception as queue_name_error:
-                        logger.warning(f"Could not get queue names for {classifier_bind.identity}: {queue_name_error}")
-            except Exception as bind_error:
-                logger.warning(f"Could not check binds: {bind_error}", exc_info=True)
-            
-            # Log task details before sending
-            logger.info(f"Task priority: {task.priority}, headers: {task.headers}")
-            # Check Redis state before sending
-            try:
-                from karton.core.backend import KartonBackend
-                from karton.core.config import Config as KartonConfig
-                pre_backend = KartonBackend(config=KartonConfig())
-                pre_queues = pre_backend.redis.keys("karton.queue.*")
-                logger.info(f"Redis queues before send_task: {len(pre_queues)} queues")
-            except Exception as e:
-                logger.warning(f"Could not check pre-send state: {e}")
-            
             producer.send_task(task)
-            logger.info(f"Task {task.uid} successfully sent to Redis queue")
-            
-            # Check if task is stored in Karton's task storage (not just queues)
-            try:
-                from karton.core.backend import KartonBackend
-                from karton.core.config import Config as KartonConfig
-                post_backend = KartonBackend(config=KartonConfig())
-                # Check if task exists in Karton's task storage
-                task_data = post_backend.redis.get(f"karton.task:{task.uid}")
-                if task_data:
-                    logger.info(f"Task {task.uid} found in Karton task storage")
-                else:
-                    logger.warning(f"Task {task.uid} NOT found in Karton task storage")
-            except Exception as e:
-                logger.warning(f"Could not check task storage: {e}")
-            # Check Redis queues after sending to see where the task went
-            try:
-                from karton.core.backend import KartonBackend
-                from karton.core.config import Config as KartonConfig
-                backend = KartonBackend(config=KartonConfig())
-                # Check all queues that might contain the task
-                classifier_queues = [
-                    "classifier",
-                    "karton.queue.high:classifier",
-                    "karton.queue.normal:classifier",
-                    "karton.queue.low:classifier"
-                ]
-                logger.info(f"Checking Redis queues for task {task.uid}...")
-                found_queues = []
-                for queue_name in classifier_queues:
-                    queue_length = backend.redis.llen(queue_name)
-                    if queue_length > 0:
-                        found_queues.append(queue_name)
-                        logger.info(f"Queue {queue_name} has {queue_length} task(s)")
-                        # Show first few task UIDs in queue
-                        first_tasks = backend.redis.lrange(queue_name, 0, 4)
-                        task_uids = [t.decode() if isinstance(t, bytes) else str(t) for t in first_tasks[:3]]
-                        logger.info(f"First tasks in {queue_name}: {task_uids}")
-                if not found_queues:
-                    logger.warning(f"No tasks found in any classifier queue after sending task {task.uid}")
-                    # Check ALL queues in Redis to see where tasks might be
-                    all_queue_keys = backend.redis.keys("karton.queue.*")
-                    logger.info(f"Found {len(all_queue_keys)} total Karton queues in Redis")
-                    # Check for unrouted queue (where tasks are initially placed)
-                    unrouted_queues = [
-                        "karton.queue.unrouted",
-                        "karton.unrouted",
-                        "unrouted"
-                    ]
-                    for unrouted_queue in unrouted_queues:
-                        queue_length = backend.redis.llen(unrouted_queue)
-                        if queue_length > 0:
-                            logger.info(f"Unrouted queue {unrouted_queue} has {queue_length} task(s)")
-                            first_tasks = backend.redis.lrange(unrouted_queue, 0, 4)
-                            task_uids = [t.decode() if isinstance(t, bytes) else str(t) for t in first_tasks[:3]]
-                            logger.info(f"Tasks in {unrouted_queue}: {task_uids}")
-                    # Check all Redis keys that might contain tasks
-                    all_keys = backend.redis.keys("*")
-                    karton_keys = [k.decode() if isinstance(k, bytes) else k for k in all_keys if "karton" in (k.decode() if isinstance(k, bytes) else k).lower()]
-                    logger.info(f"Found {len(karton_keys)} Redis keys containing 'karton': {karton_keys[:10]}")
-                    non_empty_queues = []
-                    for queue_key in all_queue_keys[:20]:  # Check first 20 queues
-                        queue_name = queue_key.decode() if isinstance(queue_key, bytes) else queue_key
-                        queue_length = backend.redis.llen(queue_name)
-                        if queue_length > 0:
-                            non_empty_queues.append((queue_name, queue_length))
-                    if non_empty_queues:
-                        logger.info(f"Non-empty queues found: {non_empty_queues}")
-                    else:
-                        logger.warning("No tasks found in ANY Karton queue - task routing may have failed")
-            except Exception as queue_error:
-                logger.error(f"Could not check queues: {queue_error}", exc_info=True)
+            logger.info(f"Task {task.uid} successfully sent to Redis")
         except Exception as e:
             logger.error(f"Failed to send task {task.uid} to Redis: {e}", exc_info=True)
             raise

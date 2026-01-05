@@ -20,15 +20,38 @@ MODULES="${MODULES:-classifier}"
 echo "=== Démarrage des modules: $MODULES ==="
 
 # Fonction pour démarrer un module en arrière-plan
+# Supporte les modules core (artemis.modules.*) et les modules extra (karton_*)
 start_module() {
     local module=$1
     echo "Démarrage du module: $module"
-    # Démarrer le module en arrière-plan - sa sortie sera visible dans les logs Railway
-    # car les processus enfants héritent de stdout/stderr du processus parent
-    python3 -m artemis.modules.$module &
-    local pid=$!
-    echo "Module $module démarré avec PID: $pid"
-    echo $pid >> /tmp/module_pids.txt
+    
+    # Détecter d'abord si c'est un module extra (commence par karton_)
+    if [[ "$module" == karton_* ]]; then
+        # Module extra - exécuter le fichier Python directement
+        module_file="/opt/Artemis-modules-extra/$module/$module.py"
+        if [ -f "$module_file" ]; then
+            echo "Module extra détecté: $module"
+            python3 "$module_file" &
+            local pid=$!
+            echo "Module $module (extra) démarré avec PID: $pid"
+            echo $pid >> /tmp/module_pids.txt
+        else
+            echo "ERREUR: Fichier module extra introuvable: $module_file"
+            echo "Vérifiez que Artemis-modules-extra est bien copié dans l'image Docker"
+            return 1
+        fi
+    # Sinon, essayer comme module core (artemis.modules.*)
+    elif python3 -c "import artemis.modules.$module" 2>/dev/null; then
+        echo "Module core détecté: artemis.modules.$module"
+        python3 -m artemis.modules.$module &
+        local pid=$!
+        echo "Module $module (core) démarré avec PID: $pid"
+        echo $pid >> /tmp/module_pids.txt
+    else
+        echo "ERREUR: Module $module introuvable (ni core ni extra)"
+        echo "Vérifiez que le module est installé et que le nom est correct"
+        return 1
+    fi
 }
 
 # Nettoyer les anciens PIDs

@@ -1,0 +1,3 @@
+[submodule "Artemis-modules-extra"]
+	path = Artemis-modules-extra
+	url = https://github.com/CERT-Polska/Artemis-modules-extra.git

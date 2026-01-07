@@ -22,6 +22,7 @@ RUN apk add --no-cache --virtual .build-deps gcc git libc-dev make libffi-dev li
     git clone https://github.com/rfc-st/humble.git --branch master /humble && \
     git clone https://github.com/CERT-Polska/joomla-scanner.git --branch main /joomla-scanner && \
     git clone https://github.com/Ostorlab/KEV.git --branch main /known-exploited-vulnerabilities && \
+    (git clone --depth 1 https://github.com/CERT-Polska/Artemis-modules-extra.git /opt/Artemis-modules-extra || echo "Échec du clonage d'Artemis-modules-extra") && \
     pip install --no-cache-dir -r requirements.txt -r /humble/requirements.txt $ADDITIONAL_REQUIREMENTS && \
     apk del .build-deps && \
     nuclei -update-templates
@@ -32,15 +33,12 @@ COPY "artemis/" "artemis/"
 COPY "alembic.ini" "alembic.ini"
 COPY "migrations/" "migrations/"
 
-# Installer les modules extra d'Artemis-modules-extra si disponibles
-# Les modules extra sont des fichiers Python dans des répertoires karton_*
-# Note: Le COPY échouera si Artemis-modules-extra n'existe pas dans le contexte de build
-# Si le submodule n'est pas initialisé, cette ligne échouera - il faut initialiser le submodule avant le build
-COPY Artemis-modules-extra/ Artemis-modules-extra/
-RUN if [ -d "Artemis-modules-extra" ] && [ -n "$(find Artemis-modules-extra -mindepth 1 -maxdepth 1 -type d \( -name 'karton_*' -o -name 'forti_vuln' \) 2>/dev/null | head -1)" ]; then \
+# Installer les modules extra d'Artemis-modules-extra
+# Le dépôt a été cloné dans la première étape RUN à /opt/Artemis-modules-extra
+RUN if [ -d "/opt/Artemis-modules-extra" ] && [ -n "$(find /opt/Artemis-modules-extra -mindepth 1 -maxdepth 1 -type d \( -name 'karton_*' -o -name 'forti_vuln' \) 2>/dev/null | head -1)" ]; then \
     echo "Installation des modules extra d'Artemis-modules-extra..."; \
     # Installer les dépendances de chaque module extra (karton_* et forti_vuln) \
-    for module_dir in Artemis-modules-extra/karton_*/ Artemis-modules-extra/forti_vuln/; do \
+    for module_dir in /opt/Artemis-modules-extra/karton_*/ /opt/Artemis-modules-extra/forti_vuln/; do \
         if [ -d "$module_dir" ]; then \
             echo "Installation des dépendances de $module_dir"; \
             if [ -f "$module_dir/requirements.txt" ]; then \

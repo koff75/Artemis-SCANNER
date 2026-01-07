@@ -6,7 +6,7 @@ ENV PATH="/usr/local/go/bin:$PATH"
 COPY requirements.txt requirements.txt
 COPY docker/go.sum docker/go.mod /go/
 ARG ADDITIONAL_REQUIREMENTS
-# We run a single RUN command to decrease layer size - e.g. the final `apk del .build-deps` will
+# We run a single RUN command to decrease layer size - e.g. the final apk del .build-deps will
 # remove some apk packages.
 # Whois here is important - if we wouldn't install it, we would default to busybox whois,
 # having different output making https://pypi.org/project/whoisdomain/ regexes fail.
@@ -50,3 +50,4 @@ ENV PORT=5000
 # But we still need to wait for Redis to be ready before starting
 # Generate karton.ini from REDIS_CONN_STR at startup (for Railway)
 CMD ["/usr/local/bin/wait-for-redis.sh", "bash", "-c", "python3 /usr/local/bin/generate-karton-config.py && alembic upgrade head && uvicorn artemis.main:app --host 0.0.0.0 --port ${PORT:-5000}"]
+

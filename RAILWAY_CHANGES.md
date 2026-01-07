@@ -30,7 +30,7 @@ Artemis-SCANNER a été adapté pour fonctionner sur Railway, une plateforme clo
 
 ### Dockerfiles pour Railway
 
-#### 1. `Dockerfile.railway`
+#### 1. `Dockerfile.web.railway` (anciennement `Dockerfile.railway`)
 - **But** : Service principal `artemis-scanner` (API web)
 - **Base** : `python:3.13-alpine3.20`
 - **Fonctionnalités** :
@@ -96,7 +96,7 @@ Artemis-SCANNER a été adapté pour fonctionner sur Railway, une plateforme clo
 
 #### 1. `railway.json`
 - **But** : Configuration pour le service principal `artemis-scanner`
-- **Contenu** : Référence à `Dockerfile.railway`
+- **Contenu** : Référence à `Dockerfile.web.railway` (renommé pour éviter la détection automatique de Railway)
 
 #### 2. `railway.karton-system.json`
 - **But** : Configuration pour le service `karton-system`
@@ -182,7 +182,7 @@ task = Task({"type": TaskType.NEW.value})  # Assure que c'est une string
    - API web FastAPI
    - Interface utilisateur
    - Génération de rapports
-   - Dockerfile : `Dockerfile.railway`
+   - Dockerfile : `Dockerfile.web.railway`
 
 2. **karton-core-workers** (Workers principaux)
    - Modules : `classifier`, `http_service_to_url`, `webapp_identifier`, `ip_lookup`

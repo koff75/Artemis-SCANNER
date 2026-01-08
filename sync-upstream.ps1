@@ -1,4 +1,4 @@
-﻿# Script pour synchroniser les mises à jour du repo upstream Artemis
+# Script pour synchroniser les mises à jour du repo upstream Artemis
 # tout en préservant les modifications Railway
 
 param(
@@ -21,10 +21,15 @@ if ($gitStatus -and -not $DryRun) {
     Write-Host "ATTENTION: Vous avez des modifications non commitées:" -ForegroundColor Yellow
     Write-Host $gitStatus -ForegroundColor Yellow
     Write-Host ""
-    $response = Read-Host "Voulez-vous continuer? Les modifications seront préservées mais vous devrez les commiter après (o/N)"
-    if ($response -ne "o" -and $response -ne "O") {
-        Write-Host "Annulé." -ForegroundColor Yellow
-        exit 0
+    # En mode non-interactif, continuer automatiquement
+    if ([Environment]::UserInteractive) {
+        $response = Read-Host "Voulez-vous continuer? Les modifications seront préservées mais vous devrez les commiter après (o/N)"
+        if ($response -ne "o" -and $response -ne "O") {
+            Write-Host "Annulé." -ForegroundColor Yellow
+            exit 0
+        }
+    } else {
+        Write-Host "Mode non-interactif: continuation automatique..." -ForegroundColor Cyan
     }
 }
 

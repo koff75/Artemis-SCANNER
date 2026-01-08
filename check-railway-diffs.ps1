@@ -1,4 +1,4 @@
-# Script pour identifier les différences entre vos fichiers Railway et upstream
+﻿# Script pour identifier les différences entre vos fichiers Railway et upstream
 # Utile pour comprendre quels fichiers vous avez modifiés
 
 Write-Host "=== Analyse des Différences Railway vs Upstream ===" -ForegroundColor Cyan
@@ -62,7 +62,7 @@ $localFiles = git ls-tree -r --name-only HEAD
 $missingFiles = $upstreamFiles | Where-Object { $localFiles -notcontains $_ }
 if ($missingFiles) {
     foreach ($file in $missingFiles) {
-        # Ignorer les fichiers qui sont normaux d'être différents (submodules, etc.)
+        # Ignorer les fichiers qui sont normaux d'etre differents (submodules, etc.)
         if ($file -notmatch "Artemis-modules-extra" -and $file -notmatch "\.git") {
             Write-Host "  ⚠ $file" -ForegroundColor Yellow
         }

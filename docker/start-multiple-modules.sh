@@ -35,6 +35,17 @@ start_module() {
         else
             module_file="/opt/Artemis-modules-extra/$module/$module.py"
         fi
+        # Debug: vérifier si le répertoire existe
+        if [ ! -d "/opt/Artemis-modules-extra" ]; then
+            echo "ERREUR: Répertoire /opt/Artemis-modules-extra n'existe pas"
+            echo "Contenu de /opt: $(ls -la /opt/ 2>/dev/null | head -20)"
+            return 1
+        fi
+        if [ "$module" != "forti_vuln" ] && [ ! -d "/opt/Artemis-modules-extra/$module" ]; then
+            echo "ERREUR: Répertoire /opt/Artemis-modules-extra/$module n'existe pas"
+            echo "Modules disponibles dans /opt/Artemis-modules-extra: $(ls -la /opt/Artemis-modules-extra/ 2>/dev/null | grep -E '^d' | awk '{print $NF}' | tr '\n' ' ')"
+            return 1
+        fi
         if [ -f "$module_file" ]; then
             echo "Module extra détecté: $module"
             python3 "$module_file" &
@@ -44,6 +55,7 @@ start_module() {
         else
             echo "ERREUR: Fichier module extra introuvable: $module_file"
             echo "Vérifiez que Artemis-modules-extra est bien copié dans l'image Docker"
+            echo "Contenu de /opt/Artemis-modules-extra/$module: $(ls -la /opt/Artemis-modules-extra/$module/ 2>/dev/null | head -10)"
             return 1
         fi
     # Sinon, essayer comme module core (artemis.modules.*)

@@ -8,7 +8,7 @@ RUN mkdir -p /etc/karton
 
 # Create a default karton.ini with S3 configuration (will be regenerated at runtime)
 RUN echo '[dashboard]' > /etc/karton/karton.ini && \
-    echo 'base_path=/karton-dashboard/' >> /etc/karton/karton.ini && \
+    echo 'base_path=/' >> /etc/karton/karton.ini && \
     echo '' >> /etc/karton/karton.ini && \
     echo '[s3]' >> /etc/karton/karton.ini && \
     echo 'address=http://s3mock:9090/' >> /etc/karton/karton.ini && \

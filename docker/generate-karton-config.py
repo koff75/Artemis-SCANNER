@@ -22,7 +22,7 @@ if REDIS_CONN_STR:
     # Generate karton.ini content
     config_lines = [
         "[dashboard]",
-        "base_path=/karton-dashboard/",
+        "base_path=/",
         "",
         "[s3]",
         "# These need to be provided, so let's provide a mock - but we don't want to have a proper",

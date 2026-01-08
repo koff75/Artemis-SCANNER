@@ -1,4 +1,4 @@
-# Script pour synchroniser les mises à jour du repo upstream Artemis
+﻿# Script pour synchroniser les mises à jour du repo upstream Artemis
 # tout en préservant les modifications Railway
 
 param(
@@ -184,5 +184,6 @@ Write-Host ""
 Write-Host "Prochaines étapes:" -ForegroundColor Cyan
 Write-Host "  1. Vérifiez les modifications: git status" -ForegroundColor White
 Write-Host "  2. Testez votre configuration Railway" -ForegroundColor White
-Write-Host "  3. Commitez les changements: git commit -m 'Merge upstream Artemis'" -ForegroundColor White
+Write-Host "  3. Commitez les changements: git commit -m `"Merge upstream Artemis`"" -ForegroundColor White
 Write-Host "  4. Poussez vers votre repo: git push origin $currentBranch" -ForegroundColor White
+

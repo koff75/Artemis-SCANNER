@@ -5,40 +5,40 @@
     </picture>
 </h1>
 
-> **⚠️ Fork Railway** : Ce dépôt est un fork du projet [Artemis](https://github.com/CERT-Polska/Artemis) modifié pour être compatible avec [Railway.app](https://railway.app). Les modifications incluent des Dockerfiles spécifiques Railway, des scripts de configuration automatique, et des ajustements pour fonctionner sans S3. Pour la version originale, consultez le [dépôt officiel](https://github.com/CERT-Polska/Artemis).
+> **⚠️ Railway Fork** : This repository is a fork of the [Artemis](https://github.com/CERT-Polska/Artemis) project modified to be compatible with [Railway.app](https://railway.app). The modifications include Railway-specific Dockerfiles, automatic configuration scripts, and adjustments to work without S3. For the original version, see the [official repository](https://github.com/CERT-Polska/Artemis).
 
 Artemis is a modular vulnerability scanner. It's the tool that powers CERT PL scanning activities by
 [checking various aspects of website security](https://artemis-scanner.readthedocs.io/en/latest/features.html)
 and [building easy-to-read messages ready to be sent to the scanned organizations](https://artemis-scanner.readthedocs.io/en/latest/generating-reports.html).
 
-## 🚂 Modifications Railway
+## 🚂 Railway Modifications
 
-Ce fork apporte les modifications suivantes pour permettre le déploiement sur Railway.app :
+This fork includes the following modifications to enable deployment on Railway.app:
 
-### Pourquoi ce fork ?
+### Why this fork?
 
-Railway.app est une plateforme de déploiement cloud qui simplifie le déploiement d'applications, mais présente certaines limitations par rapport à l'environnement Docker Compose standard d'Artemis :
+Railway.app is a cloud deployment platform that simplifies application deployment, but has some limitations compared to Artemis's standard Docker Compose environment:
 
-1. **Pas de S3** : Railway ne fournit pas de service S3, alors qu'Artemis/Karton en dépend pour certaines fonctionnalités. Des workarounds ont été implémentés pour contourner cette limitation.
-2. **Configuration dynamique** : Les variables d'environnement Railway nécessitent une génération dynamique des fichiers de configuration Karton.
-3. **Groupement de services** : Pour optimiser les coûts, plusieurs modules sont regroupés dans des services workers au lieu d'avoir un service par module.
-4. **Dockerfiles spécifiques** : Des Dockerfiles personnalisés (`Dockerfile.*.railway`) ont été créés pour adapter le build aux contraintes Railway.
+1. **No S3** : Railway doesn't provide an S3 service, while Artemis/Karton depends on it for certain features. Workarounds have been implemented to bypass this limitation.
+2. **Dynamic configuration** : Railway environment variables require dynamic generation of Karton configuration files.
+3. **Service grouping** : To optimize costs, multiple modules are grouped into worker services instead of having one service per module.
+4. **Specific Dockerfiles** : Custom Dockerfiles (`Dockerfile.*.railway`) have been created to adapt the build to Railway constraints.
 
-### Ce que cela implique
+### What this implies
 
-- **Compatibilité** : Ce fork est optimisé pour Railway.app et peut nécessiter des ajustements pour fonctionner dans d'autres environnements.
-- **Maintenance** : Ce fork suit les mises à jour du dépôt original via le script `sync-upstream.ps1` (voir [SYNC_UPSTREAM.md](SYNC_UPSTREAM.md)).
-- **Fonctionnalités** : Toutes les fonctionnalités d'Artemis sont préservées, avec des adaptations pour Railway.
-- **Documentation** : La documentation originale d'Artemis reste valide, mais le déploiement sur Railway nécessite des étapes spécifiques.
+- **Compatibility** : This fork is optimized for Railway.app and may require adjustments to work in other environments.
+- **Maintenance** : This fork follows updates from the original repository via the `sync-upstream.ps1` script (see [SYNC_UPSTREAM.md](SYNC_UPSTREAM.md)).
+- **Features** : All Artemis features are preserved, with adaptations for Railway.
+- **Documentation** : The original Artemis documentation remains valid, but deployment on Railway requires specific steps.
 
-### Fichiers Railway ajoutés/modifiés
+### Railway files added/modified
 
-- `Dockerfile.*.railway` : Dockerfiles pour les services Railway
-- `docker/generate-karton-config.py` : Génération dynamique de configuration Karton
-- `docker/karton-system-wrapper.py` : Wrapper pour contourner les vérifications S3
-- `railway-setup.ps1` : Script PowerShell pour initialiser un projet Railway
-- `sync-upstream.ps1` : Script pour synchroniser avec le dépôt upstream
-- `railway.karton-system.json` : Configuration Railway pour karton-system
+- `Dockerfile.*.railway` : Dockerfiles for Railway services
+- `docker/generate-karton-config.py` : Dynamic Karton configuration generation
+- `docker/karton-system-wrapper.py` : Wrapper to bypass S3 checks
+- `railway-setup.ps1` : PowerShell script to initialize a Railway project
+- `sync-upstream.ps1` : Script to synchronize with the upstream repository
+- `railway.karton-system.json` : Railway configuration for karton-system
 
 ## [Quick Start 🔨](https://artemis-scanner.readthedocs.io/en/latest/quick-start.html) | [Docs 📚](https://artemis-scanner.readthedocs.io/en/latest/)
 

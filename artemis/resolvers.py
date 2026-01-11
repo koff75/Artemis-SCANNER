@@ -1,10 +1,12 @@
 import functools
 import socket
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from typing import Set
 
 import dns
 from dns.resolver import Answer
 
+from artemis.config import Config
 from artemis.retrying_resolver import retry
 
 
@@ -58,7 +60,12 @@ def _results_from_answer(domain: str, answer: Answer, result_type: int) -> Set[s
 
 def _single_resolution_attempt(domain: str, query_type: str = "A") -> Set[str]:
     try:
-        answer = dns.resolver.resolve(domain, query_type)
+        # Configure resolver with explicit timeout to prevent blocking
+        resolver = dns.resolver.Resolver()
+        resolver.timeout = min(Config.Limits.REQUEST_TIMEOUT_SECONDS, 5)  # Max 5 seconds per DNS query
+        resolver.lifetime = min(Config.Limits.REQUEST_TIMEOUT_SECONDS * 2, 10)  # Max 10 seconds total
+        
+        answer = resolver.resolve(domain, query_type)
 
         if query_type == "A":
             result_type = 1
@@ -72,8 +79,26 @@ def _single_resolution_attempt(domain: str, query_type: str = "A") -> Set[str]:
         raise NoAnswer()
     except dns.resolver.NXDOMAIN:
         return set()
+    except dns.resolver.Timeout:
+        raise ResolutionException(f"DNS resolution timeout for {domain}")
     except Exception as e:
         raise ResolutionException(f"Unexpected DNS status ({e})")
+
+
+def _gethostbyname_with_timeout(domain: str, timeout: int = 5) -> str:
+    """
+    Wrapper for socket.gethostbyname with timeout using ThreadPoolExecutor.
+    Compatible with both Windows and Unix.
+    """
+    def _resolve():
+        return socket.gethostbyname(domain)
+    
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_resolve)
+        try:
+            return future.result(timeout=timeout)
+        except FutureTimeoutError:
+            raise socket.gaierror(f"DNS resolution timeout for {domain}")
 
 
 @functools.lru_cache(maxsize=8192)
@@ -86,8 +111,10 @@ def lookup(domain: str, query_type: str = "A") -> Set[str]:
     if query_type == "A":
         try:
             # First try socket.gethostbyname to lookup from hosts file
-            return {socket.gethostbyname(domain)}
-        except socket.gaierror:
+            # Use timeout to prevent indefinite blocking
+            dns_timeout = min(Config.Limits.REQUEST_TIMEOUT_SECONDS, 5)
+            return {_gethostbyname_with_timeout(domain, timeout=dns_timeout)}
+        except (socket.gaierror, FutureTimeoutError):
             pass
     try:
         domain = domain.lower()

@@ -64,7 +64,7 @@ Write-Host "5. Heartbeats..." -ForegroundColor Yellow
 $heartbeats = $logs | Select-String -Pattern "HEARTBEAT"
 if ($heartbeats) {
     Write-Host "  [OK] Heartbeats detectes (diagnostic actif):" -ForegroundColor Green
-    $heartbeats | Select-Object -Last 3 | ForEach-Object { Write-Host "    $_" -ForegroundColor White
+    $heartbeats | Select-Object -Last 3 | ForEach-Object { Write-Host "    $_" -ForegroundColor White }
 } else {
     Write-Host "  [ATTENTION] Aucun heartbeat detecte" -ForegroundColor Yellow
     Write-Host "    Le diagnostic ameliore n'est peut-etre pas deploye" -ForegroundColor Yellow

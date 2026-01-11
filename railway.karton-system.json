@@ -5,7 +5,7 @@
     "dockerfilePath": "Dockerfile.karton-system.railway"
   },
   "deploy": {
-    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 10
   }
 }
